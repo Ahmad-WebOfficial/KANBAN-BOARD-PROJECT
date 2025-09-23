@@ -1,5 +1,5 @@
-import React from 'react';
-import img3 from '../images/img3.jpg';
+import React from "react";
+import img3 from "../images/img3.jpg";
 
 function Chat() {
   return (
@@ -21,7 +21,7 @@ function Chat() {
         <img
           src={img3}
           className="rounded-lg shadow-xl max-w-full h-auto"
-          style={{ maxHeight: '400px', width: 'auto' }}
+          style={{ maxHeight: "400px", width: "auto" }}
         />
       </div>
     </section>

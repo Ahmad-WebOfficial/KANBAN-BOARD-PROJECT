@@ -1,16 +1,15 @@
-
-
-
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { IoMdClose } from "react-icons/io";
-import img3 from '../images/img5.jpg';
+import img3 from "../images/img5.jpg";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,14 +42,18 @@ const Login = () => {
 
     if (error) return;
 
+    setLoading(true);
+
     try {
+      const startTime = Date.now();
+
       const response = await fetch("http://localhost:3000/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json"
+          Accept: "application/json",
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
       const contentType = response.headers.get("content-type");
@@ -74,11 +77,19 @@ const Login = () => {
       localStorage.setItem("login", "true");
       localStorage.setItem("token", data.token);
 
-      navigate("/dashboard", { replace: true });
+      const elapsed = Date.now() - startTime;
+      const delay = 3000;
 
+      if (elapsed < delay) {
+        await new Promise((resolve) => setTimeout(resolve, delay - elapsed));
+      }
+
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       alert("❌ Network error: " + err.message);
       console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,6 +120,7 @@ const Login = () => {
           value={email}
           placeholder="Email Address"
           onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
         />
         <p className="text-red-600 text-sm mb-2 -mt-4">{emailError}</p>
 
@@ -118,11 +130,12 @@ const Login = () => {
           value={password}
           placeholder="Password"
           onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
         />
         <p className="text-red-600 text-sm -mt-4 mb-2">{passwordError}</p>
 
         <Link
-          to="/forgot-password"
+          to="/Forget"
           className="text-sm text-blue-600 text-end cursor-pointer mb-3 -mt-1 hover:underline"
         >
           Forgot Password?
@@ -130,9 +143,10 @@ const Login = () => {
 
         <button
           type="submit"
-          className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700"
+          className={`w-full bg-green-600 text-white p-2 rounded hover:bg-green-700 transition disabled:opacity-50`}
+          disabled={loading}
         >
-          Login
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
     </section>

@@ -14,6 +14,8 @@ const SignUp = () => {
   const [nameError, setNameError] = useState("");
   const [addressError, setAddressError] = useState("");
 
+  const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -58,7 +60,11 @@ const SignUp = () => {
 
     if (error) return;
 
+    setLoading(true);
+
     try {
+      const startTime = Date.now();
+
       const response = await fetch("http://localhost:3000/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,6 +72,12 @@ const SignUp = () => {
       });
 
       const data = await response.json();
+
+      const elapsed = Date.now() - startTime;
+      const delay = 3000;
+      if (elapsed < delay) {
+        await new Promise((resolve) => setTimeout(resolve, delay - elapsed));
+      }
 
       if (response.ok) {
         localStorage.setItem("token", data.token);
@@ -79,6 +91,8 @@ const SignUp = () => {
       }
     } catch (err) {
       alert("❌ Network error: " + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,6 +122,7 @@ const SignUp = () => {
           value={name}
           placeholder="Name"
           onChange={(e) => setName(e.target.value)}
+          disabled={loading}
         />
         <p className="text-red-600 text-sm mb-2 -mt-4">{nameError}</p>
 
@@ -117,6 +132,7 @@ const SignUp = () => {
           value={email}
           placeholder="Email"
           onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
         />
         <p className="text-red-600 text-sm mb-2 -mt-4">{emailError}</p>
 
@@ -126,6 +142,7 @@ const SignUp = () => {
           value={address}
           placeholder="Address"
           onChange={(e) => setAddress(e.target.value)}
+          disabled={loading}
         />
         <p className="text-red-600 text-sm mb-2 -mt-4">{addressError}</p>
 
@@ -135,20 +152,26 @@ const SignUp = () => {
           value={password}
           placeholder="Password"
           onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
         />
         <p className="text-red-600 text-sm mb-2 -mt-4">{passwordError}</p>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+          disabled={loading}
         >
-          Sign Up
+          {loading ? "Signing up..." : "Sign Up"}
         </button>
 
         <p className="text-center mt-4 text-1rem flex justify-center items-center gap-2">
           <span>Already have an account?</span>
           <Link to="/login">
-            <button className="text-blue-600 -ml-2 hover:text-blue-800">
+            <button
+              type="button"
+              className="text-blue-600 -ml-2 hover:text-blue-800"
+              disabled={loading}
+            >
               Login
             </button>
           </Link>
