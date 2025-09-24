@@ -104,6 +104,29 @@ app.post("/login", async (req, res) => {
   }
 });
 
+                 //forget page
+app.post("/forgot-password", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await Person.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully." });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

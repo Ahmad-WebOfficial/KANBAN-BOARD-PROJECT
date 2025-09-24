@@ -6,12 +6,33 @@ import { Link } from "react-router-dom";
 function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Password reset request:");
-    console.log("Email:", email);
-    console.log("New Password:", password);
+
+    try {
+      const res = await fetch("http://localhost:3000/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setMessage(data.message);
+        alert("Password reset successful. You can now login with new password.");
+      } else {
+        setMessage(data.error);
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      alert("Something went wrong. Please try again later.");
+    }
   };
 
   return (
@@ -29,9 +50,8 @@ function ForgotPassword() {
         <IoMdClose size={28} />
       </Link>
 
-      <div className="p-6 bg-white rounded-lg shadow-md w-80 md:max-w-lg relative">
+      <div className="p-6 bg-white/33 rounded-lg shadow-md w-80 md:max-w-lg relative">
         <FaLock className="text-4xl mb-4 mx-auto " />
-
         <h2 className="text-3xl font-bold mb-2 text-center">
           Forgot Password?
         </h2>
@@ -65,6 +85,10 @@ function ForgotPassword() {
             Submit
           </button>
         </form>
+
+        {message && (
+          <p className="mt-4 text-center text-sm text-green-600">{message}</p>
+        )}
       </div>
     </div>
   );
