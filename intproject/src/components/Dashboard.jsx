@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiLogOut, FiHeart } from "react-icons/fi";
+import axios from "axios";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -13,6 +14,20 @@ function Dashboard() {
   const [draggedTask, setDraggedTask] = useState(null);
   const [draggedFrom, setDraggedFrom] = useState("");
 
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        const res = await axios.get("http://localhost:3000/tasks");
+        setTodoTasks(res.data.filter((t) => t.status === "todo"));
+        setInProgressTasks(res.data.filter((t) => t.status === "inprogress"));
+        setDoneTasks(res.data.filter((t) => t.status === "done"));
+      } catch (err) {
+        setError("Failed to load tasks from server");
+      }
+    }
+    fetchTasks();
+  }, []);
+
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
       localStorage.removeItem("login");
@@ -20,21 +35,37 @@ function Dashboard() {
     }
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (newTask.trim() === "") {
       setError("Task is empty!");
       return;
     }
     setError("");
-    setTodoTasks([...todoTasks, newTask]);
-    setNewTask("");
+    try {
+      const res = await axios.post("http://localhost:3000/tasks", {
+        name: newTask,
+        status: "todo",
+      });
+      setTodoTasks([...todoTasks, res.data]);
+      setNewTask("");
+    } catch (err) {
+      setError("Failed to add task");
+    }
   };
 
-  const handleDelete = (index, type) => {
-    if (type === "todo") setTodoTasks(todoTasks.filter((_, i) => i !== index));
-    if (type === "inprogress")
-      setInProgressTasks(inProgressTasks.filter((_, i) => i !== index));
-    if (type === "done") setDoneTasks(doneTasks.filter((_, i) => i !== index));
+  const handleDelete = async (id, type) => {
+    try {
+      await axios.delete(`http://localhost:3000/tasks/${id}`);
+
+      if (type === "todo")
+        setTodoTasks(todoTasks.filter((task) => task._id !== id));
+      else if (type === "inprogress")
+        setInProgressTasks(inProgressTasks.filter((task) => task._id !== id));
+      else if (type === "done")
+        setDoneTasks(doneTasks.filter((task) => task._id !== id));
+    } catch (err) {
+      setError("Failed to delete task");
+    }
   };
 
   const handleDragStart = (task, from) => {
@@ -42,29 +73,40 @@ function Dashboard() {
     setDraggedFrom(from);
   };
 
-  const handleDrop = (toColumn) => {
+  const handleDrop = async (toColumn) => {
     if (!draggedTask || draggedFrom === toColumn) return;
 
-    if (draggedFrom === "todo") {
-      setTodoTasks(todoTasks.filter((task) => task !== draggedTask));
-    } else if (draggedFrom === "inprogress") {
-      setInProgressTasks(
-        inProgressTasks.filter((task) => task !== draggedTask)
-      );
-    } else if (draggedFrom === "done") {
-      setDoneTasks(doneTasks.filter((task) => task !== draggedTask));
-    }
+    try {
+      await axios.put(`http://localhost:3000/tasks/${draggedTask._id}`, {
+        status: toColumn,
+      });
 
-    if (toColumn === "todo") {
-      setTodoTasks([...todoTasks, draggedTask]);
-    } else if (toColumn === "inprogress") {
-      setInProgressTasks([...inProgressTasks, draggedTask]);
-    } else if (toColumn === "done") {
-      setDoneTasks([...doneTasks, draggedTask]);
-    }
+      if (draggedFrom === "todo") {
+        setTodoTasks(todoTasks.filter((task) => task._id !== draggedTask._id));
+      } else if (draggedFrom === "inprogress") {
+        setInProgressTasks(
+          inProgressTasks.filter((task) => task._id !== draggedTask._id)
+        );
+      } else if (draggedFrom === "done") {
+        setDoneTasks(doneTasks.filter((task) => task._id !== draggedTask._id));
+      }
 
-    setDraggedTask(null);
-    setDraggedFrom("");
+      if (toColumn === "todo") {
+        setTodoTasks([...todoTasks, { ...draggedTask, status: "todo" }]);
+      } else if (toColumn === "inprogress") {
+        setInProgressTasks([
+          ...inProgressTasks,
+          { ...draggedTask, status: "inprogress" },
+        ]);
+      } else if (toColumn === "done") {
+        setDoneTasks([...doneTasks, { ...draggedTask, status: "done" }]);
+      }
+
+      setDraggedTask(null);
+      setDraggedFrom("");
+    } catch (err) {
+      setError("Failed to update task status");
+    }
   };
 
   const allowDrop = (e) => e.preventDefault();
@@ -128,15 +170,20 @@ function Dashboard() {
             {todoTasks.length === 0 ? (
               <p className="text-gray-400 text-center">No tasks</p>
             ) : (
-              todoTasks.map((task, index) => (
+              todoTasks.map((task) => (
                 <div
-                  key={index}
+                  key={task._id}
                   draggable
                   onDragStart={() => handleDragStart(task, "todo")}
                   className="p-2 mb-2 flex justify-between items-center bg-gray-200 rounded shadow cursor-move"
                 >
-                  <span>{task}</span>
-                  <span onClick={() => handleDelete(index, "todo")}>❌</span>
+                  <span>{task.name}</span>
+                  <span
+                    onClick={() => handleDelete(task._id, "todo")}
+                    className="cursor-pointer"
+                  >
+                    ❌
+                  </span>
                 </div>
               ))
             )}
@@ -153,15 +200,18 @@ function Dashboard() {
             {inProgressTasks.length === 0 ? (
               <p className="text-gray-400 text-center">No tasks</p>
             ) : (
-              inProgressTasks.map((task, index) => (
+              inProgressTasks.map((task) => (
                 <div
-                  key={index}
+                  key={task._id}
                   draggable
                   onDragStart={() => handleDragStart(task, "inprogress")}
                   className="p-2 mb-2 flex justify-between items-center bg-yellow-100 rounded shadow cursor-move"
                 >
-                  <span>{task}</span>
-                  <span onClick={() => handleDelete(index, "inprogress")}>
+                  <span>{task.name}</span>
+                  <span
+                    onClick={() => handleDelete(task._id, "inprogress")}
+                    className="cursor-pointer"
+                  >
                     ❌
                   </span>
                 </div>
@@ -180,15 +230,20 @@ function Dashboard() {
             {doneTasks.length === 0 ? (
               <p className="text-gray-400 text-center">No tasks</p>
             ) : (
-              doneTasks.map((task, index) => (
+              doneTasks.map((task) => (
                 <div
-                  key={index}
+                  key={task._id}
                   draggable
                   onDragStart={() => handleDragStart(task, "done")}
                   className="p-2 mb-2 flex justify-between items-center bg-green-100 rounded shadow cursor-move"
                 >
-                  <span>{task}</span>
-                  <span onClick={() => handleDelete(index, "done")}>❌</span>
+                  <span>{task.name}</span>
+                  <span
+                    onClick={() => handleDelete(task._id, "done")}
+                    className="cursor-pointer"
+                  >
+                    ❌
+                  </span>
                 </div>
               ))
             )}

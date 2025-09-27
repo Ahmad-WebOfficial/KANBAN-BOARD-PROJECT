@@ -11,6 +11,11 @@ function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (password.length < 4 || password.length > 8) {
+      alert("Password must be between 4 and 8 characters.");
+      return;
+    }
+
     try {
       const res = await fetch("http://localhost:3000/forgot-password", {
         method: "POST",
@@ -24,7 +29,9 @@ function ForgotPassword() {
 
       if (res.ok) {
         setMessage(data.message);
-        alert("Password reset successful. You can now login with new password.");
+        alert(
+          "Password reset successful. You can now login with new password."
+        );
       } else {
         setMessage(data.error);
         alert(data.error);
@@ -71,11 +78,13 @@ function ForgotPassword() {
 
           <input
             type="password"
-            placeholder="Enter new password"
+            placeholder="Enter new password (4-8 characters)"
             className="p-2 border rounded w-full mb-4"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            minLength={4}
+            maxLength={8}
           />
 
           <button
