@@ -10,7 +10,6 @@ import { Person, Task } from "./Person.js";
 const app = express();
 const PORT = 3000;
 const JWT_SECRET = "your_secret_key";
-const JWT_REFRESH_SECRET = "your_refresh_secret_key";
 
 app.use(express.json());
 app.use(cors());
@@ -79,22 +78,8 @@ app.post("/signup", signupLimiter, async (req, res) => {
 
     await newUser.save();
 
-    const token = jwt.sign({ id: newUser._id }, JWT_SECRET, {
-      expiresIn: "1h",
-    });
-    const refreshToken = jwt.sign({ id: newUser._id }, JWT_REFRESH_SECRET, {
-      expiresIn: "7d",
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "strict",
-    });
-
     res.status(201).json({
       message: "Signup successful",
-      token,
       user: {
         id: newUser._id,
         name: newUser.name,
@@ -125,16 +110,7 @@ app.post("/login", loginLimiter, async (req, res) => {
     if (!isMatch)
       return res.status(401).json({ error: "Invalid Email or Password" });
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
-    const refreshToken = jwt.sign({ id: user._id }, JWT_REFRESH_SECRET, {
-      expiresIn: "7d",
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "strict",
-    });
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "2d" });
 
     res.status(200).json({
       message: "Login successful",
@@ -152,7 +128,7 @@ app.post("/login", loginLimiter, async (req, res) => {
   }
 });
 
-// FORGOT PASSWORD
+//FORGET
 app.post("/forgot-password", forgetLimiter, async (req, res) => {
   const { email, password } = req.body;
 
