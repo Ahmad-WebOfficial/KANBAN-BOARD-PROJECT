@@ -16,6 +16,11 @@ const taskSchema = new mongoose.Schema({
     enum: ["todo", "inprogress", "done"],
     default: "todo",
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Person",
+    required: true,
+  }, 
 });
 
 const Task = mongoose.models.Task || mongoose.model("Task", taskSchema);

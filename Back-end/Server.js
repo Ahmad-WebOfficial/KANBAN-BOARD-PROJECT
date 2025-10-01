@@ -39,6 +39,20 @@ const forgetLimiter = rateLimit({
   keyGenerator: (req) => req.body.email || req.ip,
 });
 
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ error: "Forbidden" });
+
+    req.user = decoded;
+    next();
+  });
+};
+
 // SIGNUP
 app.post("/signup", signupLimiter, async (req, res) => {
   const { name, email, address, password } = req.body;
@@ -163,22 +177,25 @@ app.post("/forgot-password", forgetLimiter, async (req, res) => {
   }
 });
 
-// TASK ROUTES
-app.get("/tasks", async (req, res) => {
+app.get("/tasks", authenticateToken, async (req, res) => {
   try {
-    const tasks = await Task.find();
+    const tasks = await Task.find({ userId: req.user.id });
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
 });
 
-app.post("/tasks", async (req, res) => {
+app.post("/tasks", authenticateToken, async (req, res) => {
   const { name, status } = req.body;
   if (!name) return res.status(400).json({ error: "Task name is required" });
 
   try {
-    const newTask = new Task({ name, status: status || "todo" });
+    const newTask = new Task({
+      name,
+      status: status || "todo",
+      userId: req.user.id,
+    });
     await newTask.save();
     res.status(201).json(newTask);
   } catch (err) {
@@ -186,9 +203,15 @@ app.post("/tasks", async (req, res) => {
   }
 });
 
-app.delete("/tasks/:id", async (req, res) => {
+app.delete("/tasks/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+
+    if (task.userId.toString() !== req.user.id)
+      return res.status(403).json({ error: "Forbidden" });
+
     await Task.findByIdAndDelete(id);
     res.json({ message: "Task deleted" });
   } catch (err) {
@@ -196,7 +219,7 @@ app.delete("/tasks/:id", async (req, res) => {
   }
 });
 
-app.put("/tasks/:id", async (req, res) => {
+app.put("/tasks/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -205,17 +228,16 @@ app.put("/tasks/:id", async (req, res) => {
   }
 
   try {
-    const updatedTask = await Task.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
+    const task = await Task.findById(id);
+    if (!task) return res.status(404).json({ error: "Task not found" });
 
-    if (!updatedTask) {
-      return res.status(404).json({ error: "Task not found" });
-    }
+    if (task.userId.toString() !== req.user.id)
+      return res.status(403).json({ error: "Forbidden" });
 
-    res.json(updatedTask);
+    task.status = status;
+    await task.save();
+
+    res.json(task);
   } catch (err) {
     console.error("Update Task Error:", err);
     res.status(500).json({ error: "Server error" });

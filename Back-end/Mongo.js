@@ -18,18 +18,3 @@ function connectToMongoDB() {
 }
 
 export default connectToMongoDB;
-
-// import mongoose from "mongoose";
-
-// function connectToMongoDB() {
-//   mongoose
-//     .connect("mongodb://127.0.0.1:27017/todoApp")
-//     .then(() => {
-//       console.log("MongoDB connected successfully");
-//     })
-//     .catch((err) => {
-//       console.error("MongoDB connection failed:", err);
-//     });
-// }
-
-// export default connectToMongoDB;

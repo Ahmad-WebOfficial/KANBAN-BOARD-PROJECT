@@ -14,10 +14,18 @@ function Dashboard() {
   const [draggedTask, setDraggedTask] = useState(null);
   const [draggedFrom, setDraggedFrom] = useState("");
 
+  const token = localStorage.getItem("token");
+
+  const axiosConfig = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
   useEffect(() => {
     async function fetchTasks() {
       try {
-        const res = await axios.get("http://localhost:3000/tasks");
+        const res = await axios.get("http://localhost:3000/tasks", axiosConfig);
         setTodoTasks(res.data.filter((t) => t.status === "todo"));
         setInProgressTasks(res.data.filter((t) => t.status === "inprogress"));
         setDoneTasks(res.data.filter((t) => t.status === "done"));
@@ -27,10 +35,10 @@ function Dashboard() {
     }
     fetchTasks();
   }, []);
-
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
       localStorage.removeItem("login");
+      localStorage.removeItem("token");
       navigate("/Login", { replace: true });
     }
   };
@@ -42,10 +50,11 @@ function Dashboard() {
     }
     setError("");
     try {
-      const res = await axios.post("http://localhost:3000/tasks", {
-        name: newTask,
-        status: "todo",
-      });
+      const res = await axios.post(
+        "http://localhost:3000/tasks",
+        { name: newTask, status: "todo" },
+        axiosConfig
+      );
       setTodoTasks([...todoTasks, res.data]);
       setNewTask("");
     } catch (err) {
@@ -55,7 +64,7 @@ function Dashboard() {
 
   const handleDelete = async (id, type) => {
     try {
-      await axios.delete(`http://localhost:3000/tasks/${id}`);
+      await axios.delete(`http://localhost:3000/tasks/${id}`, axiosConfig);
 
       if (type === "todo")
         setTodoTasks(todoTasks.filter((task) => task._id !== id));
@@ -77,9 +86,11 @@ function Dashboard() {
     if (!draggedTask || draggedFrom === toColumn) return;
 
     try {
-      await axios.put(`http://localhost:3000/tasks/${draggedTask._id}`, {
-        status: toColumn,
-      });
+      await axios.put(
+        `http://localhost:3000/tasks/${draggedTask._id}`,
+        { status: toColumn },
+        axiosConfig
+      );
 
       if (draggedFrom === "todo") {
         setTodoTasks(todoTasks.filter((task) => task._id !== draggedTask._id));
