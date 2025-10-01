@@ -18,29 +18,36 @@ connectToMongoDB();
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 10,
   message: { error: "Too many login attempts. Try again after 15 minutes." },
-  standardHeaders: true,
-  legacyHeaders: false,
+  keyGenerator: (req) => req.body.email || req.ip,
 });
 
 const signupLimiter = rateLimit({
   windowMs: 30 * 60 * 1000,
-  max: 7,
-  message: { error: "Too many signup attempts. Try again after 30 minutes." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-const ForgetLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
   max: 4,
-  message: { error: "Too many signup attempts. Try again after 1 hour." },
-  standardHeaders: true,
-  legacyHeaders: false,
+  message: { error: "Too many signup attempts. Try again after 30 minutes." },
+  keyGenerator: (req) => req.body.email || req.ip,
 });
-// SIGNUP page
+
+const forgetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: {
+    error: "Too many forgot password attempts. Try again after 1 hour.",
+  },
+  keyGenerator: (req) => req.body.email || req.ip,
+});
+
+// SIGNUP
 app.post("/signup", signupLimiter, async (req, res) => {
   const { name, email, address, password } = req.body;
+
+  if (!email || !password || !name) {
+    return res
+      .status(400)
+      .json({ error: "Name, email and password are required" });
+  }
 
   try {
     const existingUser = await Person.findOne({ email });
@@ -49,7 +56,6 @@ app.post("/signup", signupLimiter, async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = new Person({
       name,
       email,
@@ -88,20 +94,22 @@ app.post("/signup", signupLimiter, async (req, res) => {
   }
 });
 
-// LOGIN page
+// LOGIN
 app.post("/login", loginLimiter, async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
+
   try {
     const user = await Person.findOne({ email });
-    if (!user) {
+    if (!user)
       return res.status(401).json({ error: "Invalid Email or Password" });
-    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(401).json({ error: "Invalid Email or Password" });
-    }
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
     const refreshToken = jwt.sign({ id: user._id }, JWT_REFRESH_SECRET, {
@@ -130,15 +138,19 @@ app.post("/login", loginLimiter, async (req, res) => {
   }
 });
 
-// Forget Password
-app.post("/forgot-password", ForgetLimiter, async (req, res) => {
+// FORGOT PASSWORD
+app.post("/forgot-password", forgetLimiter, async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json({ error: "Email and new password are required" });
+  }
 
   try {
     const user = await Person.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
@@ -150,6 +162,8 @@ app.post("/forgot-password", ForgetLimiter, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// TASK ROUTES
 app.get("/tasks", async (req, res) => {
   try {
     const tasks = await Task.find();
@@ -159,7 +173,6 @@ app.get("/tasks", async (req, res) => {
   }
 });
 
-// Add new task
 app.post("/tasks", async (req, res) => {
   const { name, status } = req.body;
   if (!name) return res.status(400).json({ error: "Task name is required" });
@@ -182,6 +195,33 @@ app.delete("/tasks/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+app.put("/tasks/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!["todo", "inprogress", "done"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status value" });
+  }
+
+  try {
+    const updatedTask = await Task.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    res.json(updatedTask);
+  } catch (err) {
+    console.error("Update Task Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });

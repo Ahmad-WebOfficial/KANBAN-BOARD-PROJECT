@@ -91,15 +91,13 @@ function Dashboard() {
         setDoneTasks(doneTasks.filter((task) => task._id !== draggedTask._id));
       }
 
+      const updatedTask = { ...draggedTask, status: toColumn };
       if (toColumn === "todo") {
-        setTodoTasks([...todoTasks, { ...draggedTask, status: "todo" }]);
+        setTodoTasks([...todoTasks, updatedTask]);
       } else if (toColumn === "inprogress") {
-        setInProgressTasks([
-          ...inProgressTasks,
-          { ...draggedTask, status: "inprogress" },
-        ]);
+        setInProgressTasks([...inProgressTasks, updatedTask]);
       } else if (toColumn === "done") {
-        setDoneTasks([...doneTasks, { ...draggedTask, status: "done" }]);
+        setDoneTasks([...doneTasks, updatedTask]);
       }
 
       setDraggedTask(null);
@@ -154,9 +152,7 @@ function Dashboard() {
             Add
           </button>
         </div>
-        {error && (
-          <p className="text-red-600 text-sm -mt-5 -ml-8 mb-5">{error}</p>
-        )}
+        {error && <p className="text-red-600 text-sm mb-5">{error}</p>}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 w-full max-w-6xl">
           <div
