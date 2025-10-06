@@ -128,7 +128,7 @@ app.post("/login", loginLimiter, async (req, res) => {
   }
 });
 
-//FORGET
+// FORGET PASSWORD
 app.post("/forgot-password", forgetLimiter, async (req, res) => {
   const { email, password } = req.body;
 
@@ -152,7 +152,7 @@ app.post("/forgot-password", forgetLimiter, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
+//Dashboard
 app.get("/tasks", authenticateToken, async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.user.id });
@@ -163,15 +163,18 @@ app.get("/tasks", authenticateToken, async (req, res) => {
 });
 
 app.post("/tasks", authenticateToken, async (req, res) => {
-  const { name, status } = req.body;
+  const { name, description, status } = req.body;
+
   if (!name) return res.status(400).json({ error: "Task name is required" });
 
   try {
     const newTask = new Task({
       name,
+      description: description || "",
       status: status || "todo",
       userId: req.user.id,
     });
+
     await newTask.save();
     res.status(201).json(newTask);
   } catch (err) {

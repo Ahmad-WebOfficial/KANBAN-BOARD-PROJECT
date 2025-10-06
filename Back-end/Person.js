@@ -11,6 +11,7 @@ const Person = mongoose.models.Person || mongoose.model("Person", personSchema);
 
 const taskSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  description: { type: String, default: "" },
   status: {
     type: String,
     enum: ["todo", "inprogress", "done"],
@@ -20,7 +21,7 @@ const taskSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Person",
     required: true,
-  }, 
+  },
 });
 
 const Task = mongoose.models.Task || mongoose.model("Task", taskSchema);
